@@ -1,0 +1,37 @@
+package ${package};
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+
+#foreach($pkg in ${importPackages})
+import ${pkg};
+#end
+
+
+/**
+ * <p>
+ * $!{comment}
+ * </p>
+ *
+ * @author ${author}
+ * @since ${date}
+ */
+@Data
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = false)
+public class ${entity}Vo implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    #foreach($field in ${fieldList})
+    /**
+     * ${field.comment}
+     */
+    private ${field.javaType} ${field.fieldName};
+    #end
+
+
+}

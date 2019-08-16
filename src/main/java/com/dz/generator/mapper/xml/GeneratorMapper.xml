@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dz.generator.mapper.GeneratorMapper">
+
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="colResultMap" type="com.dz.generator.model.ColumnDo">
+		<id column="column_name" property="name" />
+		<id column="column_type" property="jdbcType" />
+		<id column="column_comment" property="comment" />
+		<id column="table_name" property="tableName" />
+	</resultMap>
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="tableResultMap" type="map">
+		<id column="table_name" property="name" />
+		<id column="table_comment" property="comment" />
+	</resultMap>
+
+
+	<select id="findListTable" resultMap="tableResultMap">
+		select table_name,table_comment from information_schema.tables
+		where table_schema='xsun_group'
+		order by table_name
+	</select>
+
+
+
+	<select id="findListColumn" parameterType="java.lang.String" resultMap="colResultMap">
+		select  column_name, column_comment,table_name,column_type  from Information_schema.columns
+		where table_schema = 'xsun_group' and  table_Name in
+			<foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+			        #{item}
+			</foreach>
+		order by table_name,column_name
+	</select>
+
+</mapper>

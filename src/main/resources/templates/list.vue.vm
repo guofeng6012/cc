@@ -1,0 +1,436 @@
+<template>
+  <div>
+    <el-breadcrumb separator-class="el-icon-arrow-right" style="margin:8px;font-size:15px;">
+      <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+      <el-breadcrumb-item>系统管理</el-breadcrumb-item>
+      <el-breadcrumb-item>用户管理</el-breadcrumb-item>
+    </el-breadcrumb>
+    <!--搜索开始-->
+    <el-row>
+      <el-col :span="24">
+        <div class="grid-content bg-purple-dark" style="margin:4px 8px;">
+    <el-form :inline="true" :model="queryUser" class="demo-form-inline" size="small">
+      <el-form-item label="用户名" >
+        <el-input v-model="queryUser.uname"  style="width:120px;" placeholder="用户名"></el-input>
+      </el-form-item>
+      <el-form-item label="姓名">
+        <el-input v-model="queryUser.realname"  style="width:120px;" placeholder="姓名"></el-input>
+      </el-form-item>
+      <el-form-item label="工号">
+        <el-input v-model="queryUser.empno"  style="width:120px;" placeholder="工号"></el-input>
+      </el-form-item>
+      <el-form-item label="状态">
+        <el-select v-model="queryUser.status"  style="width:100px;" placeholder="状态">
+          <el-option label="全部" value="2" selected="true"></el-option>
+          <el-option label="可用" value="0"></el-option>
+          <el-option label="禁用" value="1"></el-option>
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary"  @click="onSubmit">查询</el-button>
+      </el-form-item>
+    </el-form>
+        </div>
+      </el-col>
+    </el-row>
+    <!--搜索结束-->
+    <!--表格开始-->
+    <el-row>
+      <el-col :span="24">
+        <div class="grid-content bg-purple-dark" style="margin:5px 8px;">
+          <el-button type="primary" size="mini" icon="el-icon-plus" @click="addUserFormVisible = true">添加</el-button>
+          <el-button type="primary" size="mini" icon="el-icon-delete" @click="batchDelUser">批量删除</el-button>
+        </div>
+      </el-col>
+    </el-row>
+    <!--表格开始-->
+    <el-row>
+      <el-col :span="24">
+        <div class="grid-content bg-purple-dark" style="margin:5px 8px;">
+          <el-table
+            :data="tableData"
+            border
+            stripe
+            @selection-change="handleSelectionChange"
+            style="width: 100%;height:100%;">
+            <el-table-column
+              type="selection"
+              width="55">
+            </el-table-column>
+            <el-table-column
+              prop="username"
+              label="用户名"
+              width="120">
+            </el-table-column>
+            <el-table-column
+              prop="name"
+              label="姓名"
+              width="80">
+            </el-table-column>
+            <el-table-column
+              prop="sex"
+              label="性别"
+              width="60">
+            </el-table-column>
+            <el-table-column
+              prop="idcard"
+              label="身份证号"
+              width="175">
+            </el-table-column>
+            <el-table-column
+              prop="empno"
+              width="80"
+              label="工号">
+            </el-table-column>
+            <el-table-column
+              prop="mobile"
+              width="120"
+              label="手机号">
+            </el-table-column>
+            <el-table-column
+              prop="email"
+              label="邮箱">
+              width="135"
+            </el-table-column>
+            <el-table-column
+              prop="org"
+              width="120"
+              label="部门">
+            </el-table-column>
+            <el-table-column
+              prop="status"
+              width="80"
+              label="状态">
+            </el-table-column>
+            <el-table-column label="操作">
+              <template slot-scope="scope">
+                <el-button
+                  size="mini"
+                  @click="handleEdit(scope.$index, scope.row)">编辑</el-button>
+                <el-button
+                  size="mini"
+                  type="danger"
+                  @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-col>
+    </el-row>
+    <!--表格结束-->
+    <!--分页开始-->
+    <el-row>
+      <el-col :span="24">
+    <div class="block" style="margin:5px 8px;">
+      <el-pagination
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+        :current-page="currentPage"
+        :page-sizes="[10, 20, 50, 100,200,500,1000]"
+        :page-size="10"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="2000">
+      </el-pagination>
+    </div>
+      </el-col>
+    </el-row>
+    <!--分页结束-->
+    <!--添加用户dialog开始-->
+    <el-dialog title="添加用户" :visible.sync="addUserFormVisible">
+      <el-form :model="adduserform" size="mini">
+        <el-form-item label="用户名" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.username" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="密码" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.pwd" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="确认密码" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.checkpwd" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="姓名" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.name" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="工号" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.empno" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="部门" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.department" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="岗位" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.post" auto-complete="off"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="userPerfectFormVisible = true">完善用户信息</el-button>
+        <el-button @click="addUserFormVisible = false">取 消</el-button>
+        <el-button type="primary" @click="addUserCommit">确 定</el-button>
+      </div>
+    </el-dialog>
+    <!--添加用户dialog结束-->
+    <!--完善用户信息dialog开始-->
+    <el-dialog title="完善用户信息" :visible.sync="userPerfectFormVisible">
+      <el-form :model="userPerfectForm" size="mini">
+        <el-form-item label="性别" :label-width="formLabelWidth">
+          <el-select v-model="userPerfectForm.sex" placeholder="请选择性别">
+            <el-option label="男" value="0"></el-option>
+            <el-option label="女" value="1"></el-option>
+            <el-option label="未知" value="2"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="民族" :label-width="formLabelWidth">
+          <el-input v-model="userPerfectForm.nation" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="手机号" :label-width="formLabelWidth">
+          <el-input v-model="userPerfectForm.mobile" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="邮箱" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.email" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="出生日期" :label-width="formLabelWidth">
+          <el-date-picker type="date" placeholder="出生日期" v-model="adduserform.birthday"></el-date-picker>
+        </el-form-item>
+        <el-form-item label="学历" :label-width="formLabelWidth">
+          <el-select v-model="userPerfectForm.education" placeholder="请选择学历">
+            <el-option label="本科" value="0"></el-option>
+            <el-option label="专科" value="1"></el-option>
+            <el-option label="未知" value="2"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="身份证号" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.idcard" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="专业" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.marjor" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="政治面貌" :label-width="formLabelWidth">
+          <el-select v-model="userPerfectForm.politics" >
+            <el-option label="本科" value="0"></el-option>
+            <el-option label="专科" value="1"></el-option>
+            <el-option label="未知" value="2"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="入职日期" :label-width="formLabelWidth">
+          <el-date-picker type="date" placeholder="入职日期" v-model="adduserform.hiredate"></el-date-picker>
+       </el-form-item>
+        <el-form-item label="离职日期" :label-width="formLabelWidth">
+          <el-date-picker type="date" placeholder="离职日期" v-model="adduserform.termdate"></el-date-picker>
+        </el-form-item>
+        <el-form-item label="工作级别" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.post" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="婚姻状况" :label-width="formLabelWidth">
+          <el-select v-model="userPerfectForm.marrystatus" >
+            <el-option label="已婚" value="0"></el-option>
+            <el-option label="未婚" value="1"></el-option>
+            <el-option label="未知" value="2"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="职务" :label-width="formLabelWidth">
+        <el-input v-model="adduserform.position" auto-complete="off"></el-input>
+      </el-form-item>
+        <el-form-item label="家庭邮编" :label-width="formLabelWidth">
+        <el-input v-model="adduserform.homezip" auto-complete="off"></el-input>
+      </el-form-item>
+        <el-form-item label="家庭地址" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.homeaddress" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="传真" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.fox" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="座机号" :label-width="formLabelWidth">
+          <el-input v-model="adduserform.telphone" auto-complete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="账号状态" :label-width="formLabelWidth">
+          <el-select v-model="userPerfectForm.marrystatus" >
+            <el-option label="可用" value="0"></el-option>
+            <el-option label="禁用" value="1"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="备注" :label-width="formLabelWidth">
+          <el-input type="textarea" v-model="userPerfectForm.description"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="userPerfectFormVisible = false">取 消</el-button>
+        <el-button type="primary" @click="perfectUserCommit">确 定</el-button>
+      </div>
+    </el-dialog>
+    <!--完善用户信息dialog结束-->
+  </div>
+</template>
+<script>
+  export default {
+    data() {
+      return {
+        userPerfectFormVisible:false,
+        addUserFormVisible: false,
+        queryUser:{
+          uname:'',
+          realname:'',
+          empno:'',
+          status:''
+        },
+        adduserform: {
+          username: '',
+          name: '',
+          pwd: '',
+          checkpwd: '',
+          empno: '',
+          post: '',
+          department: ''
+        },
+       userPerfectForm: {
+          username: '',
+          name: '',
+          pwd: '',
+          checkpwd: '',
+          empno: '',
+          post: '',
+          department: ''
+        },
+        formLabelWidth: '120px',
+        input:'',
+        currentPage: 3,
+        user: {
+          username: '',
+          name: '',
+          empno: '',
+          status: ''
+        },
+        rules: {
+          username: [
+            { required: true, message: '请输入用户名', trigger: 'blur' },
+            { min: 3, max: 5, message: '长度在 3 到 5 个字符', trigger: 'blur' }
+          ],
+        name: [
+            { required: true, message: '请输入姓名', trigger: 'change' }
+          ]
+        },
+        tableData: [{
+          username: 'wangxiaohu',
+          name: '王小虎',
+          empno: '1001',
+          org: '民生银行',
+          mobile: '13890899666',
+          sex:'男',
+          idcard:'110226198501272116',
+          email: 'taiger@hantek.cn',
+          status: '可用'
+        }, {
+          username: 'wangxiaohu',
+          name: '王小虎',
+          empno: '1001',
+          org: '民生银行',
+          mobile: '13890899666',
+          sex:'男',
+          idcard:'110226198501272116',
+          email: 'taiger@hantek.cn',
+          status: '可用'
+        }, {
+          username: 'wangxiaohu',
+          name: '王小虎',
+          empno: '1001',
+          org: '民生银行',
+          mobile: '13890899666',
+          sex:'男',
+          idcard:'110226198501272116',
+          email: 'taiger@hantek.cn',
+          status: '可用'
+        }, {
+          username: 'wangxiaohu',
+          name: '王小虎',
+          empno: '1001',
+          org: '民生银行',
+          mobile: '13890899666',
+          email: 'taiger@hantek.cn',
+          status: '可用'
+        },
+        {
+          username: 'wangxiaohu',
+          name: '王小虎',
+          empno: '1001',
+          org: '民生银行',
+          mobile: '13890899666',
+          sex:'男',
+          idcard:'110226198501272116',
+          email: 'taiger@hantek.cn',
+          status: '可用'
+        }, {
+          username: 'wangxiaohu',
+          name: '王小虎',
+          empno: '1001',
+          org: '民生银行',
+          mobile: '13890899666',
+          sex:'男',
+          idcard:'110226198501272116',
+          email: 'taiger@hantek.cn',
+          status: '可用'
+      }, {
+          username: 'wangxiaohu',
+          name: '王小虎',
+          empno: '1001',
+          org: '民生银行',
+          mobile: '13890899666',
+          sex:'男',
+          idcard:'110226198501272116',
+          email: 'taiger@hantek.cn',
+          status: '可用'
+      }, {
+          username: 'wangxiaohu',
+          name: '王小虎',
+          empno: '1001',
+          org: '民生银行',
+          mobile: '13890899666',
+          email: 'taiger@hantek.cn',
+          status: '可用'
+      }
+        ]
+      }
+    },
+    methods: {
+      addUserCommit(){
+        this.addUserFormVisible= false;
+      },
+      perfectUserCommit(){
+        this.userPerfectFormVisible= false;
+      },
+      handleSizeChange(val) {
+        console.log(`每页 ${val} 条`);
+      },
+      handleCurrentChange(val) {
+        console.log(`当前页: ${val}`);
+      },
+      handleEdit(index, row) {
+        this.addUserFormVisible=true;
+        console.log(index, row);
+      },
+      handleDelete(index, row) {
+        console.log(index, row);
+      },
+      onSubmit() {
+        console.log('submit!');
+      },
+      handleSelectionChange(val) {
+        this.multipleSelection = val;
+      },
+
+    batchDelUser() {
+      this.$confirm('是否确定删除?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+##        this.$message({
+##          type: 'success',
+##          message: '删除成功!'
+##        });
+      }).catch(() => {
+##        this.$message({
+##          type: 'info',
+##          message: '已取消删除'
+##        });
+      });
+      }
+    }
+  }
+</script>

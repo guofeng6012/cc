@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>代码生成器</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.0.5/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+<div id="app">
+
+    <el-form ref="form" :model="form" label-width="80px">
+        <el-form-item label="目录">
+            <el-input v-model="form.outputDir" placeholder="C:\Users\xx\xx\xx\dz\dz-generator\src\main\java" style="width: 98.2%"></el-input>
+        </el-form-item>
+        <el-form-item label="作者">
+            <el-col :span="6">
+                <el-input v-model="form.author" placeholder="admin"></el-input>
+            </el-col>
+            <el-col :span="1">
+                &nbsp;
+            </el-col>
+            <el-col :span="17">
+                <label>包路径：</label>
+                <el-input v-model="form.packageName" placeholder="com.dz.xx" style="width: 90%"></el-input>
+            </el-col>
+        </el-form-item>
+<!--        <el-form-item label="模版">-->
+<!--            <el-checkbox-group v-model="form.checkTpl">-->
+<!--            <el-checkbox v-for="tpl in tpls" :label="tpl" :key="tpl" width="20%">{{tpl}}</el-checkbox>-->
+<!--            </el-checkbox-group>-->
+<!--        </el-form-item>-->
+        <el-form-item label="表名">
+            <el-select v-model="form.tablename" multiple placeholder="请选择" style="width: 98.2%">
+                <el-option
+                        v-for="item in tableList"
+                        :key="item.name"
+                        :label="item.name"
+                        :value="item.name">
+                        <span>{{ item.name }}</span>
+                        <span style="margin-left:20px;color: #8492a6; font-size: 13px">{{ item.comment }}</span>
+                </el-option>
+            </el-select>
+        </el-form-item>
+        <el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="generatorDBTemplate">生成后台代码</el-button>
+                <el-button @click="getTableFields" icon="el-icon-search">查看字段</el-button>
+
+                <el-button @click="showColFrom" icon="el-icon-circle-plus-outline">新增字段</el-button>
+                <el-button @click="dialogModelVisible = true">生成模型</el-button>
+                <!--<el-button @click="dialogHtmlVisible = true">生成HTML</el-button>-->
+            </el-form-item>
+        </el-form-item>
+    </el-form>
+    <el-row>
+        <el-col :span="24">
+            <el-table
+                    :data="customFieds"
+                    border
+                    style="width: 100%">
+                <el-table-column
+                        min-width="120px"
+                        prop="name"
+                        label="名称">
+                </el-table-column>
+                <el-table-column
+                        min-width="120"
+                        prop="humpName"
+                        label="实体名">
+                </el-table-column>
+                <el-table-column
+                        prop="comment"
+                        label="注释">
+                </el-table-column>
+                <el-table-column
+                        prop="javaType"
+                        label="类型">
+                </el-table-column>
+                <el-table-column
+                        width="150"
+                        label="操作">
+                    <template slot-scope="scope">
+                        <el-button
+                                @click.native.prevent="updateCustomFieds(scope.$index, customFieds)"
+                                type="primary"
+                                icon="el-icon-edit"
+                                size="small">
+                        </el-button>
+                        <el-button
+                                @click.native.prevent="delCustomFieds(scope.$index, customFieds)"
+                                type="primary"
+                                icon="el-icon-delete"
+                                size="small">
+                        </el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-col>
+    </el-row>
+    <el-dialog title="选择字段" top="10" :visible.sync="dialogTableVisible" width="90%" center>
+        <el-table
+                ref="multipleTable"
+                :data="tableFields"
+                @selection-change="handleSelectionChange"
+                @row-click="rowClick"
+                border
+                :height="400"
+                style="width: 100%">
+            <el-table-column
+                    type="selection"
+                    width="30">
+            </el-table-column>
+            <el-table-column
+                    type="index"
+                    width="60">
+            </el-table-column>
+            <el-table-column
+                    min-width="120"
+                    prop="name"
+                    label="字段名">
+            </el-table-column>
+            <el-table-column
+                    min-width="120"
+                    prop="humpName"
+                    label="实体名">
+            </el-table-column>
+            <el-table-column
+                    prop="comment"
+                    label="注释">
+            </el-table-column>
+            <el-table-column
+                    prop="tableName"
+                    label="表名">
+            </el-table-column>
+            <el-table-column
+                    prop="javaType"
+                    label="java类型">
+            </el-table-column>
+            <el-table-column
+                    prop="jdbcType"
+                    label="jdbc类型">
+            </el-table-column>
+        </el-table>
+        <span slot="footer" class="dialog-footer">
+            <el-button @click="dialogTableVisible = false">取 消</el-button>
+            <el-button type="primary" @click="selectCustomFieds">生 成</el-button>
+        </span>
+    </el-dialog>
+
+    <el-dialog title="编辑字段" :visible.sync="dialogFormVisible" center>
+        <el-form :model="colfrom" label-width="80px">
+            <el-form-item label="字段名" >
+                <el-input v-model="colfrom.name" auto-complete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="字段类型"  >
+                <el-select v-model="colfrom.jdbcType" placeholder="请选择类型" style="width: 100%">
+                    <el-option
+                            v-for="item in fieldTypes"
+                            :key="item.jdbcType"
+                            :label="item.jdbcType"
+                            :value="item.jdbcType">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="备注" >
+                <el-input v-model="colfrom.comments" auto-complete="off"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogFormVisible = false">取 消</el-button>
+            <el-button type="primary" @click="submitCustomFieds">确 定</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog title="生成模型" :visible.sync="dialogModelVisible" center>
+        <el-form :model="modelfrom" label-width="80px">
+            <el-form-item label="名称" >
+                <el-input v-model="modelfrom.name" auto-complete="off" placeholder="不要以 VO  和 DTO结尾  系统已处理"></el-input>
+            </el-form-item>
+            <el-form-item label="说明" >
+                <el-input v-model="modelfrom.comments" auto-complete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="类型"  >
+                <el-radio v-model="modelfrom.type" label="vo">VO</el-radio>
+                <el-radio v-model="modelfrom.type" label="dto">DTO</el-radio>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogModelVisible = false">取 消</el-button>
+            <el-button type="primary" @click="submitModel">确 定</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog title="生成Html" :visible.sync="dialogHtmlVisible" center>
+        <el-form :model="htmlfrom" label-width="80px">
+            <el-form-item label="名称" >
+                <el-input v-model="htmlfrom.name" auto-complete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="模版"  >
+                    <el-radio v-model="htmlfrom.checkTpl" label="listVue">listVue</el-radio>
+                    <el-radio v-model="htmlfrom.checkTpl" label="treeVue">treeVue</el-radio>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogHtmlVisible = false">取 消</el-button>
+            <el-button type="primary" @click="submitHtml">确 定</el-button>
+        </div>
+    </el-dialog>
+</div>
+</body>
+<!-- 先引入 Vue -->
+<script src="js/vue.min.js"></script>
+<!-- 引入组件库 -->
+<!--<script src="js/ele-ui.js"></script>-->
+<script src="https://unpkg.com/element-ui@2.0.5/lib/index.js"></script>
+<!-- 引入axios -->
+<script src="js/axios.min.js"></script>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            tablename:[],//表名
+            tableList:[],//表集合
+            tableFields:[],
+            dialogTableVisible:false,
+            form:{
+                outputDir:'D:\\temp',
+                checkTpl:[],
+                author:'admin',
+                packageName:'com.test'
+            },
+            tpls:[],
+            customFieds:[],
+            multipleSelection:[],
+            dialogFormVisible:false,
+            fieldTypes:[],
+            colfrom:{
+                name:'',
+                jdbcType:'',
+                comments:'',
+                index:-1
+            },
+            dialogModelVisible:false,
+            modelfrom:{
+                name:'',
+                comments:'',
+                type:'vo'
+            },
+            dialogHtmlVisible:false,
+            htmlfrom:{
+                name:'',
+                checkTpl:''
+            }
+        }
+        ,mounted: function () {
+            this.$nextTick(function () {
+                this.getTables();
+                this.getTemplate();
+                this.getFieldtype();
+            })
+        }
+        // 在 `methods` 对象中定义方法
+        ,methods: {
+            handleSelectionChange:function(val) {
+                this.multipleSelection = val;
+            },
+            rowClick:function(row, event, column){
+//                console.log(row);
+                this.$refs.multipleTable.toggleRowSelection(row);
+            },
+            selectCustomFieds: function () {
+                var _self = this;
+                this.multipleSelection.forEach(function(elem){
+                    var temp = _self.customFieds;
+                    if(temp.length <= 0){
+                        _self.customFieds.push(elem);
+                    }else{
+                        var flgadd = true;
+                        for(var i=0;i < temp.length ;i++){
+                            var temp1 = temp[i];
+                            if(temp1.name == elem.name){
+                                flgadd = false;
+                                break;
+                            }
+                        }
+
+                        if(flgadd){
+                            _self.customFieds.push(elem);
+                        }
+                    }
+                });
+//                this.customFieds.sort();
+
+                this.$refs.multipleTable.clearSelection();
+                this.dialogTableVisible = false;
+
+            },
+            showColFrom:function () {
+                this.dialogFormVisible = true;
+                this.colfrom.index = -1;
+            },
+            submitCustomFieds: function () {
+                var temp = {
+                    comment:this.colfrom.comments,
+                    name:this.colfrom.name,
+                    jdbcType:this.colfrom.jdbcType
+                };
+
+                if(this.colfrom.index >= 0 ){
+                    this.customFieds.splice(this.colfrom.index, 1);
+                    this.dialogFormVisible = false;
+                }
+                this.customFieds.push(temp);
+            },
+            delCustomFieds: function (index, rows) {
+                rows.splice(index, 1);
+            }
+            ,updateCustomFieds: function (index, rows) {
+                var temp = rows[index];
+                this.colfrom.comments = temp.comment;
+                this.colfrom.name = temp.name;
+                this.colfrom.jdbcType = temp.jdbcType;
+                this.colfrom.index = index;
+                this.dialogFormVisible = true;
+            }
+            ,getTables: function () {
+                var _self = this;
+                //通过给定的ID来发送请求
+                axios.get('/table')
+                    .then(function(response){
+                        if(response.status == 200){
+                            _self.tableList = response.data.data;
+//                            console.log(_self.tableList)
+                        }
+                    });
+            }
+            ,getTemplate: function () {
+                var _self = this;
+                //通过给定的ID来发送请求
+                axios.get('/template')
+                    .then(function(response){
+                        if(response.status == 200){
+                            _self.tpls = response.data.data;
+                            console.log("========================")
+//                            console.log(_self.tpls)
+                        }
+                    });
+            }
+            ,getFieldtype: function () {
+                var _self = this;
+                //通过给定的ID来发送请求
+                axios.get('/fieldtype')
+                    .then(function(response){
+                        if(response.status == 200){
+                            _self.fieldTypes = response.data.data;
+                            console.log("========================")
+//                            console.log(_self.tpls)
+                        }
+                    });
+            }
+            ,getTableFields: function () {
+                if(this.form.tablename == null || this.form.tablename.length <= 0){
+                    this.$notify.error({
+                        title: '错误',
+                        message: '请选择表',
+                        position: 'bottom-right'
+                    });
+                    return false;
+                }
+                //通过给定的ID来发送请求
+                var temp = this.form.tablename.join(".");
+                console.log(temp);
+                var _self = this;
+                axios.get('/filed?names=' + temp)
+                    .then(function(response){
+                        if(response.status == 200){
+                            _self.tableFields = response.data.data;
+                            _self.dialogTableVisible = true;
+//                            console.log(tableFields)
+                        }
+                    });
+            }
+            ,generatorDBTemplate: function () {
+
+                if(this.form.tablename == null || this.form.tablename.length <= 0){
+                    this.$notify.error({
+                        title: '错误',
+                        message: '请选择表',
+                        position: 'bottom-right'
+                    });
+                    return false;
+                }
+
+                var _self = this;
+
+                var tempData = {
+                    outputDir:this.form.outputDir,
+                    author:this.form.author,
+                    tableNames:this.form.tablename.join("."),
+                    packageDir:this.form.packageName,
+                    tpls:this.form.checkTpl.join(".")
+                };
+
+                console.log(tempData);
+                //通过给定的ID来发送请求
+                axios({
+                    method:"POST",
+                    url:'/generator',
+                    data:tempData
+                }).then(function(response){
+                        if(response.status == 200){
+                            _self.$message('生成成功');
+                        }else{
+                            _self.$message('生成失败');
+                        }
+                    });
+            }
+            ,submitModel:function(){
+                var _self = this;
+
+                var tempData = {
+                    outputDir:this.form.outputDir,
+                    author:this.form.author,
+                    packageDir:this.form.packageName,
+                    name:this.modelfrom.name,
+                    comments:this.modelfrom.comments,
+                    tpls:this.modelfrom.type,
+                    jsonStr: JSON.stringify(this.customFieds)
+                };
+
+                console.log(tempData);
+
+//                return false;
+                //通过给定的ID来发送请求
+                axios({
+                    method:"POST",
+                    url:'/generatorDtoOrVo',
+                    data:tempData
+                }).then(function(response){
+                    _self.dialogModelVisible = false;
+                    if(response.status === 200){
+                        _self.$message('生成成功');
+                        location.href = "/download?filePath=" + encodeURIComponent(response.data.data);
+                    }else{
+                        _self.$message('生成失败');
+                    }
+                });
+            }
+            ,submitHtml:function(){
+                var _self = this;
+
+                var tempData = {
+                    outputDir:this.form.outputDir,
+                    author:this.form.author,
+                    name:this.htmlfrom.name,
+                    tpls:this.htmlfrom.checkTpl
+                };
+
+                console.log(tempData);
+                //通过给定的ID来发送请求
+                axios({
+                    method:"POST",
+                    url:'/generatorHtml',
+                    data:tempData
+                }).then(function(response){
+                    _self.dialogHtmlVisible = false;
+                    if(response.status == 200){
+                        _self.$message('生成成功');
+                    }else{
+                        _self.$message('生成失败');
+                    }
+                });
+            }
+        }
+
+    })
+</script>
+</html>
